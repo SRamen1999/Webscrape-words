@@ -12,6 +12,7 @@ plain_text = source_code.content
 soup = BeautifulSoup(plain_text, 'html.parser')
 print(soup.title)
 
+
 images = soup.find_all("img")
 print(images)
 
