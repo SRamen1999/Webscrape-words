@@ -1,42 +1,53 @@
-import cv2
-import pytesseract
+import re
+import requests
 from bs4 import BeautifulSoup
-import requests as rq
-import urllib.request
+import pytesseract
+import os
+import cv2
 
+#https://kissmanga.org/
+#https://www.comicextra.com/
+#'https://www.kissmanga.org/chapter/manga-ng952689/chapter-700.5'
 
-#image scraping
+site = input("Enter url: ")
 
-response = input("Enter url: ")
-source_code = rq.get(response)
-plain_text = source_code.content
-soup = BeautifulSoup(plain_text, 'html.parser')
-print(soup.title)
-images = soup.find_all("img")
-print(images)
-number = 0
+# check if the folder is created already
+if not (os.path.isdir('web_photos')):
+    os.mkdir('web_photos')
 
-#downloads the images
-for image in images:
-    image_src = image["src"]
+response = requests.get(site)
+soup = BeautifulSoup(response.text, 'html.parser')
 
-    print(image_src)
-    #next three lines bypass 403 forbidden
-    opener = urllib.request.build_opener()
-    opener.addheaders = [('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
-    urllib.request.install_opener(opener)
-    urllib.request.urlretrieve(image_src, str(number))
-    number += 1
+#find all the img urls
+img_tags = soup.find_all('img')
+
+urls = [img['src'] for img in img_tags]
+page_num = 0
+
+#filename = re.search(r'/([\w_-]+[.](jpg|gif|png))$', url)
+for url in urls:
+    '''filename = re.search(r'/([\w_-]+[.](jpg|gif|png| ))$', urls[i])
+    if not filename:
+         print("Regex didn't match with the url: {}".format(urls[i]))
+         continue'''
+
+    if 'http' in url:
+        page_num += 1
+        with open("web_photos//" + str(page_num) + '.png', 'wb+')as f:
+            response = requests.get(url)
+            f.write(response.content)
+
 
 #prints the words from the pictures
-
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-for num in range(len(images)):
+os.chdir('web_photos')
+for num in range(2,page_num):
     print("Page " + str(num))
-    img = cv2.imread(str(num))
-    img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+    img = cv2.imread(str(num)+'.png')
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     text = pytesseract.image_to_string(img)
     print(text)
-    cv2.imshow('Result',img)
+    imS = cv2.resize(img, (700, 700))
+    cv2.imshow('Result', imS)
     cv2.waitKey(0)
 
